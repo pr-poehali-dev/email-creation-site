@@ -68,15 +68,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user_email = user_result[0]
             
             if box == 'inbox':
+                # Get all emails for user's primary email and additional emails
                 cur.execute(
                     """
                     SELECT e.id, u.email as sender_email, e.subject, e.body, e.is_read, e.sent_at
                     FROM emails e
                     JOIN users u ON e.sender_id = u.id
-                    WHERE e.recipient_email = %s AND e.is_draft = FALSE
+                    WHERE (e.recipient_email = %s 
+                           OR e.recipient_email IN (SELECT email FROM user_emails WHERE user_id = %s))
+                          AND e.is_draft = FALSE
                     ORDER BY e.sent_at DESC
                     """,
-                    (user_email,)
+                    (user_email, int(user_id))
                 )
             elif box == 'sent':
                 cur.execute(
