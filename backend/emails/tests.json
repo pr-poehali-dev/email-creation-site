@@ -29,7 +29,8 @@
       "expectedStatus": 201,
       "expectedBody": {
         "success": true,
-        "email_id": "number"
+        "email_id": "number",
+        "message": "string"
       },
       "bodyMatcher": "partial"
     }

@@ -1,15 +1,19 @@
 '''
-Business: Handle email operations - send, receive, list emails, drafts
+Business: Handle email operations - send via SMTP, receive, list emails, drafts
 Args: event with httpMethod, body (recipient, subject, body, is_draft), headers (X-User-Id)
 Returns: HTTP response with email data or list of emails
 '''
 
 import json
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import psycopg2
 import psycopg2.extras
+from email_validator import validate_email, EmailNotValidError
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -152,6 +156,36 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'isBase64Encoded': False
                     }
                 
+                # Validate email
+                try:
+                    validate_email(recipient_email, check_deliverability=False)
+                except EmailNotValidError:
+                    return {
+                        'statusCode': 400,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'error': 'Invalid email address'}),
+                        'isBase64Encoded': False
+                    }
+                
+                # Get sender email
+                cur.execute("SELECT email FROM users WHERE id = %s", (int(user_id),))
+                sender_result = cur.fetchone()
+                if not sender_result:
+                    return {
+                        'statusCode': 404,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        'body': json.dumps({'error': 'User not found'}),
+                        'isBase64Encoded': False
+                    }
+                sender_email = sender_result[0]
+                
+                # Save to database
                 cur.execute(
                     """
                     INSERT INTO emails (sender_id, recipient_email, subject, body, is_draft)
@@ -161,6 +195,31 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     (int(user_id), recipient_email, subject, body_text, is_draft)
                 )
                 email_id = cur.fetchone()[0]
+                
+                # Send via SMTP if not draft
+                if not is_draft:
+                    smtp_host = os.environ.get('SMTP_HOST')
+                    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+                    smtp_user = os.environ.get('SMTP_USER')
+                    smtp_password = os.environ.get('SMTP_PASSWORD')
+                    
+                    if smtp_host and smtp_user and smtp_password:
+                        try:
+                            msg = MIMEMultipart('alternative')
+                            msg['Subject'] = subject
+                            msg['From'] = f"{sender_email} <{smtp_user}>"
+                            msg['To'] = recipient_email
+                            
+                            text_part = MIMEText(body_text, 'plain', 'utf-8')
+                            msg.attach(text_part)
+                            
+                            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                                server.starttls()
+                                server.login(smtp_user, smtp_password)
+                                server.send_message(msg)
+                        except Exception as smtp_error:
+                            # Log error but don't fail - email saved to DB
+                            print(f"SMTP Error: {str(smtp_error)}")
                 
                 return {
                     'statusCode': 201,
