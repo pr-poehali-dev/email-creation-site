@@ -1,0 +1,37 @@
+{
+  "tests": [
+    {
+      "name": "Get inbox emails",
+      "method": "GET",
+      "path": "/?box=inbox",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "emails": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Send email",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "action": "send",
+        "recipient_email": "test@skzry.ru",
+        "subject": "Test Email",
+        "body": "This is a test email"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "success": true,
+        "email_id": "number"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
