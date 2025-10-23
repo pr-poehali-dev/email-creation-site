@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const API_AUTH = 'https://functions.poehali.dev/3f0551e1-bc02-4729-b5a7-44c4a375efe8';
 const API_EMAILS = 'https://functions.poehali.dev/99c710f2-54ee-43c5-b94f-d4a816d686d9';
+const API_CHECK_INCOMING = 'https://functions.poehali.dev/f3de738b-4ea6-4f37-81ff-48e49f8fa4e8';
 
 interface User {
   id: number;
@@ -106,6 +107,40 @@ export default function Index() {
       }
     } catch (error) {
       console.error('Failed to load emails:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkIncoming = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(API_CHECK_INCOMING, {
+        headers: { 'X-User-Id': user.id.toString() }
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: 'Проверка завершена',
+          description: `Загружено новых писем: ${data.imported}`
+        });
+        loadEmails(activeSection);
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось проверить почту',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось подключиться к серверу',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -269,6 +304,15 @@ export default function Index() {
                 >
                   <Icon name="Plus" size={18} className="mr-2" />
                   Написать
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full mb-4 border-[#0066CC] text-[#0066CC] hover:bg-[#0066CC] hover:text-white"
+                  onClick={checkIncoming}
+                  disabled={loading}
+                >
+                  <Icon name="RefreshCw" size={18} className="mr-2" />
+                  Проверить почту
                 </Button>
                 <div className="space-y-1">
                   {[
