@@ -10,6 +10,11 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import psycopg2
 import psycopg2.extras
+import smtplib
+import imaplib
+import email
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -169,7 +174,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     cur.execute("SELECT id FROM users WHERE email = %s", (recipient_email,))
                     recipient_result = cur.fetchone()
                 
-                # Save to database - instant delivery
+                # Save to database
                 cur.execute(
                     """
                     INSERT INTO emails (sender_id, recipient_email, subject, body, is_draft)
@@ -180,6 +185,24 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 )
                 email_id = cur.fetchone()[0]
                 
+                # Send via SMTP if not draft
+                if not is_draft:
+                    smtp_host = os.environ.get('SMTP_HOST')
+                    smtp_port = int(os.environ.get('SMTP_PORT', 465))
+                    smtp_user = os.environ.get('SMTP_USER')
+                    smtp_password = os.environ.get('SMTP_PASSWORD')
+                    
+                    msg = MIMEMultipart()
+                    msg['From'] = smtp_user
+                    msg['To'] = recipient_email
+                    msg['Subject'] = subject
+                    msg.attach(MIMEText(body_text, 'plain'))
+                    
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+                    server.login(smtp_user, smtp_password)
+                    server.send_message(msg)
+                    server.quit()
+                
                 return {
                     'statusCode': 201,
                     'headers': {
@@ -189,7 +212,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({
                         'success': True,
                         'email_id': email_id,
-                        'message': 'Draft saved' if is_draft else 'Email sent successfully'
+                        'message': 'Draft saved' if is_draft else 'Email sent via SMTP'
                     }),
                     'isBase64Encoded': False
                 }
@@ -220,6 +243,72 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'Access-Control-Allow-Origin': '*'
                     },
                     'body': json.dumps({'success': True}),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'check_inbox':
+                imap_host = os.environ.get('IMAP_HOST')
+                imap_port = int(os.environ.get('IMAP_PORT', 993))
+                imap_user = os.environ.get('IMAP_USER')
+                imap_password = os.environ.get('IMAP_PASSWORD')
+                
+                mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+                mail.login(imap_user, imap_password)
+                mail.select('INBOX')
+                
+                status, messages = mail.search(None, 'UNSEEN')
+                email_ids = messages[0].split()
+                
+                new_emails = []
+                for email_id in email_ids[-10:]:
+                    status, msg_data = mail.fetch(email_id, '(RFC822)')
+                    raw_email = msg_data[0][1]
+                    msg = email.message_from_bytes(raw_email)
+                    
+                    subject = msg['subject']
+                    sender = msg['from']
+                    body = ''
+                    
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() == 'text/plain':
+                                body = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                                break
+                    else:
+                        body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    
+                    cur.execute("SELECT id FROM users WHERE email = %s", (imap_user,))
+                    receiver = cur.fetchone()
+                    receiver_id = receiver[0] if receiver else None
+                    
+                    if receiver_id:
+                        cur.execute(
+                            """
+                            INSERT INTO emails (sender_id, recipient_email, subject, body, is_draft, is_read)
+                            VALUES (%s, %s, %s, %s, FALSE, FALSE)
+                            """,
+                            (1, imap_user, subject or '(no subject)', body[:1000], )
+                        )
+                    
+                    new_emails.append({
+                        'from': sender,
+                        'subject': subject,
+                        'body': body[:200]
+                    })
+                
+                mail.logout()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    },
+                    'body': json.dumps({
+                        'success': True,
+                        'new_emails': len(new_emails),
+                        'emails': new_emails
+                    }),
                     'isBase64Encoded': False
                 }
             
