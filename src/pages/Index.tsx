@@ -70,20 +70,20 @@ export default function Index() {
         setUser(data.user);
         setView('dashboard');
         toast({
-          title: authMode === 'register' ? 'Account created!' : 'Welcome back!',
-          description: `Logged in as ${data.user.email}`,
+          title: authMode === 'register' ? 'Аккаунт создан!' : 'С возвращением!',
+          description: `Вы вошли как ${data.user.email}`,
         });
       } else {
         toast({
-          title: 'Error',
-          description: data.error || 'Authentication failed',
+          title: 'Ошибка',
+          description: data.error || 'Ошибка авторизации',
           variant: 'destructive'
         });
       }
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to connect to server',
+        title: 'Ошибка',
+        description: 'Не удалось подключиться к серверу',
         variant: 'destructive'
       });
     } finally {
@@ -114,8 +114,8 @@ export default function Index() {
   const handleSendEmail = async (isDraft = false) => {
     if (!user || !composeTo || !composeSubject || !composeBody) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all fields',
+        title: 'Ошибка',
+        description: 'Заполните все поля',
         variant: 'destructive'
       });
       return;
@@ -141,8 +141,8 @@ export default function Index() {
       
       if (response.ok) {
         toast({
-          title: isDraft ? 'Draft saved' : 'Email sent!',
-          description: data.message
+          title: isDraft ? 'Черновик сохранен' : 'Письмо отправлено!',
+          description: isDraft ? 'Черновик сохранен в папке Черновики' : 'Ваше письмо успешно отправлено'
         });
         setShowCompose(false);
         setComposeTo('');
@@ -151,15 +151,15 @@ export default function Index() {
         loadEmails(activeSection);
       } else {
         toast({
-          title: 'Error',
-          description: data.error || 'Failed to send email',
+          title: 'Ошибка',
+          description: data.error || 'Не удалось отправить письмо',
           variant: 'destructive'
         });
       }
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to connect to server',
+        title: 'Ошибка',
+        description: 'Не удалось подключиться к серверу',
         variant: 'destructive'
       });
     } finally {
@@ -177,29 +177,29 @@ export default function Index() {
             </div>
             <CardTitle className="text-3xl font-bold tracking-tight">SKZRY Mail</CardTitle>
             <CardDescription className="text-base">
-              {authMode === 'register' ? 'Create your @skzry.ru email' : 'Sign in to your account'}
+              {authMode === 'register' ? 'Создайте свою почту @skzry.ru' : 'Войдите в свой аккаунт'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAuth} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+                <Label htmlFor="username" className="text-sm font-medium">Имя пользователя</Label>
                 <Input
                   id="username"
-                  placeholder="Enter username"
+                  placeholder="Введите имя пользователя"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="h-11"
                   required
                 />
-                <p className="text-xs text-muted-foreground">Your email: {username || 'username'}@skzry.ru</p>
+                <p className="text-xs text-muted-foreground">Ваша почта: {username || 'username'}@skzry.ru</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Пароль</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder={authMode === 'register' ? 'Create password' : 'Enter password'}
+                  placeholder={authMode === 'register' ? 'Придумайте пароль' : 'Введите пароль'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-11"
@@ -211,7 +211,7 @@ export default function Index() {
                 className="w-full h-11 text-base font-medium bg-[#0066CC] hover:bg-[#0052A3]"
                 disabled={loading}
               >
-                {loading ? 'Processing...' : authMode === 'register' ? 'Create Account' : 'Sign In'}
+                {loading ? 'Обработка...' : authMode === 'register' ? 'Создать аккаунт' : 'Войти'}
                 <Icon name="ArrowRight" size={18} className="ml-2" />
               </Button>
             </form>
@@ -220,7 +220,7 @@ export default function Index() {
                 onClick={() => setAuthMode(authMode === 'register' ? 'login' : 'register')}
                 className="text-sm text-[#0066CC] hover:underline"
               >
-                {authMode === 'register' ? 'Already have an account? Sign in' : "Don't have an account? Register"}
+                {authMode === 'register' ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
               </button>
             </div>
           </CardContent>
@@ -253,7 +253,7 @@ export default function Index() {
             }}
           >
             <Icon name="LogOut" size={18} className="mr-2" />
-            Sign Out
+            Выйти
           </Button>
         </div>
       </header>
@@ -268,13 +268,13 @@ export default function Index() {
                   onClick={() => setShowCompose(true)}
                 >
                   <Icon name="Plus" size={18} className="mr-2" />
-                  Compose
+                  Написать
                 </Button>
                 <div className="space-y-1">
                   {[
-                    { id: 'inbox', icon: 'Mail', label: 'Inbox' },
-                    { id: 'sent', icon: 'Send', label: 'Sent' },
-                    { id: 'drafts', icon: 'FileText', label: 'Drafts' },
+                    { id: 'inbox', icon: 'Mail', label: 'Входящие' },
+                    { id: 'sent', icon: 'Send', label: 'Отправленные' },
+                    { id: 'drafts', icon: 'FileText', label: 'Черновики' },
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -299,21 +299,21 @@ export default function Index() {
               <CardHeader className="border-b bg-white">
                 <CardTitle className="text-xl capitalize">{activeSection}</CardTitle>
                 <CardDescription>
-                  {activeSection === 'inbox' && 'Your received messages'}
-                  {activeSection === 'sent' && 'Messages you sent'}
-                  {activeSection === 'drafts' && 'Your saved drafts'}
+                  {activeSection === 'inbox' && 'Полученные сообщения'}
+                  {activeSection === 'sent' && 'Отправленные сообщения'}
+                  {activeSection === 'drafts' && 'Сохраненные черновики'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {loading ? (
                   <div className="p-8 text-center text-muted-foreground">
                     <Icon name="Loader2" size={48} className="mx-auto mb-4 opacity-50 animate-spin" />
-                    <p>Loading emails...</p>
+                    <p>Загрузка писем...</p>
                   </div>
                 ) : emails.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     <Icon name="Mail" size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>No emails yet</p>
+                    <p>Писем пока нет</p>
                   </div>
                 ) : (
                   <div className="divide-y">
@@ -360,33 +360,33 @@ export default function Index() {
       <Dialog open={showCompose} onOpenChange={setShowCompose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>New Message</DialogTitle>
-            <DialogDescription>Compose a new email</DialogDescription>
+            <DialogTitle>Новое сообщение</DialogTitle>
+            <DialogDescription>Напишите новое письмо</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="to">To</Label>
+              <Label htmlFor="to">Кому</Label>
               <Input
                 id="to"
-                placeholder="recipient@skzry.ru"
+                placeholder="recipient@example.com"
                 value={composeTo}
                 onChange={(e) => setComposeTo(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
+              <Label htmlFor="subject">Тема</Label>
               <Input
                 id="subject"
-                placeholder="Email subject"
+                placeholder="Тема письма"
                 value={composeSubject}
                 onChange={(e) => setComposeSubject(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="body">Message</Label>
+              <Label htmlFor="body">Сообщение</Label>
               <Textarea
                 id="body"
-                placeholder="Write your message..."
+                placeholder="Напишите ваше сообщение..."
                 rows={8}
                 value={composeBody}
                 onChange={(e) => setComposeBody(e.target.value)}
@@ -399,14 +399,14 @@ export default function Index() {
                 className="bg-[#0066CC] hover:bg-[#0052A3]"
               >
                 <Icon name="Send" size={16} className="mr-2" />
-                {loading ? 'Sending...' : 'Send'}
+                {loading ? 'Отправка...' : 'Отправить'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => handleSendEmail(true)} 
                 disabled={loading}
               >
-                Save Draft
+                Сохранить черновик
               </Button>
             </div>
           </div>
@@ -418,7 +418,7 @@ export default function Index() {
           <DialogHeader>
             <DialogTitle>{selectedEmail?.subject}</DialogTitle>
             <DialogDescription>
-              From: {selectedEmail?.from || selectedEmail?.to} • {selectedEmail && new Date(selectedEmail.sent_at).toLocaleString()}
+              От: {selectedEmail?.from || selectedEmail?.to} • {selectedEmail && new Date(selectedEmail.sent_at).toLocaleString('ru-RU')}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
